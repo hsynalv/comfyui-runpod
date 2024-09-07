@@ -20,7 +20,7 @@ RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Clone ComfyUI repository
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
-RUN git clone https://github.com/city96/ComfyUI-GGUF /comfyui/custom_nodes/ComfyUI-GGUF
+RUN git clone https://github.com/SeargeDP/ComfyUI_Searge_LLM /comfyui/custom_nodes/ComfyUI_Searge_LLM
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
@@ -29,8 +29,8 @@ WORKDIR /comfyui
 RUN pip3 install --upgrade --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 \
     && pip3 install --upgrade -r requirements.txt
 
-# Change working directory to ComfyUI
-WORKDIR /comfyui/custom_nodes/ComfyUI-GGUF
+# Change working directory to ComfyUI_Searge_LLM
+WORKDIR /comfyui/custom_nodes/ComfyUI_Searge_LLM
 
 # Install ComfyUI dependencies
 RUN pip3 install --upgrade -r requirements.txt
@@ -58,11 +58,19 @@ ARG MODEL_TYPE
 WORKDIR /comfyui
 
 # Download checkpoints/vae/LoRA to include in image based on model type
-
-RUN wget -O models/unet/flux1-dev-Q4_0.gguf https://huggingface.co/city96/FLUX.1-dev-gguf/resolve/main/flux1-dev-Q4_0.gguf
+RUN wget --header="Authorization: Bearer ${HUGGINGFACE_ACCESS_TOKEN}" -O models/unet/flux1-dev.safetensors https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors
 RUN wget -O models/clip/clip_l.safetensors https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors
-RUN wget -O models/clip/clip2.safetensors https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
-RUN wget -O models/vae/ae.safetensors https://huggingface.co/StableDiffusionVN/Flux/resolve/main/Vae/flux_vae.safetensors
+RUN wget -O models/clip/t5xxl_fp8_e4m3fn.safetensors https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
+RUN wget --header="Authorization: Bearer ${HUGGINGFACE_ACCESS_TOKEN}" -O models/vae/ae.safetensors https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/ae.safetensors
+
+
+# LLM models
+RUN mkdir -p /models/llm_gguf/ && \
+    wget -O /models/llm_gguf/Mistral-7B-Instruct-v0.3.IQ1_M.gguf https://huggingface.co/MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3.IQ1_M.gguf
+
+
+# Loras
+RUN wget -O models/loras/Hyper-FLUX.1-dev-16steps-lora.safetensors https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-16steps-lora.safetensors
 
 
 # Stage 3: Final image
@@ -70,6 +78,7 @@ FROM base as final
 
 # Copy models from stage 2 to the final image
 COPY --from=downloader /comfyui/models /comfyui/models
+COPY --from=downloader /models/llm_gguf /models/llm_gguf
 
 # Start the container
 CMD /start.sh
