@@ -1,4 +1,4 @@
-runpod_worker_comfy:
+llm_ggufrunpod_worker_comfy:
   base_path: /runpod-volume
   checkpoints: models/checkpoints/
   clip: models/clip/
@@ -11,3 +11,4 @@ runpod_worker_comfy:
   vae: models/vae/
   unet: models/unet/
   custom_nodes: models/custom_nodes
+  llm_gguf: models/llm_gguf
